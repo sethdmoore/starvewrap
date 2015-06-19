@@ -14,10 +14,14 @@ func check(err error) {
 */
 
 func main() {
-	dir := "/home/steam/steamapps/DST/bin"
+	dir := "/home/steam/steamapps/DST"
+	steamcmd := "/home/steam/steamcmd/steamcmd.sh"
+
 	//servers := []string{"1", "2", "3"}
 	servers := []string{"1"}
 	messages := make(chan int)
+
+	handlers.Update()
 
 	fmt.Println("hello")
 	for idx, num := range servers {

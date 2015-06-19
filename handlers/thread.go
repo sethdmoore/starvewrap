@@ -17,11 +17,6 @@ func check(err error) {
 	}
 }
 
-func countingMode(line string) {
-	
-
-}
-
 func Start(prefix string, dir string) {
 	player_count := 0
 	os.Chdir(dir)
@@ -43,9 +38,11 @@ func Start(prefix string, dir string) {
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
+			/*
 			if (scanner.Text() == "ConsoleInput: \"c_listallplayers()\"") {
 				// Detect player number
 			}
+			*/
 			fmt.Printf("%s: %s\n", prefix, scanner.Text())
 		}
 		//r.ReadString("\n")
@@ -58,7 +55,9 @@ func Start(prefix string, dir string) {
 
 	go func() {
 		for {
-			stdin.Write([]byte("c_listallplayers()\n"))
+			stdin.Write([]byte("playerlist_file = io.open(\"starvewrap_playerlist\", \"w\")\n"))
+			stdin.Write([]byte("playerlist_file:write(c_listallplayers())\n"))
+			stdin.Write([]byte("playerlist_file:close()\n"))
 			time.Sleep(3 * time.Second)
 		}
 	}()
