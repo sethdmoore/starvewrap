@@ -17,10 +17,11 @@ func check(err error) {
 	}
 }
 
-func Start(prefix string, dir string) {
+func Start(prefix string, dir string, bin string) {
 	player_count := 0
 	os.Chdir(dir)
-	cmd := exec.Command("./dontstarve_dedicated_server_nullrenderer", "-console")
+	fmt.Println("%s/%s", dir, bin)
+	cmd := exec.Command("./" + bin, "-console")
 	
 	fmt.Println("got here?")
 	stdout, err := cmd.StdoutPipe()
@@ -57,6 +58,8 @@ func Start(prefix string, dir string) {
 		for {
 			stdin.Write([]byte("playerlist_file = io.open(\"starvewrap_playerlist\", \"w\")\n"))
 			stdin.Write([]byte("playerlist_file:write(c_listallplayers())\n"))
+			stdin.Write([]byte("a = c_listallplayers()\n"))
+			stdin.Write([]byte("playerlist_file:write(a)\n"))
 			stdin.Write([]byte("playerlist_file:close()\n"))
 			time.Sleep(3 * time.Second)
 		}

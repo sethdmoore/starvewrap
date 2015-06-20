@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	fmt
-	"os/exec"
+	"fmt"
+	//"os/exec"
 )
 
-func Update(steam) {
-	
+func Update(steam string) {
+	fmt.Printf("%v", steam)	
 }
