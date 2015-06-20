@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"io"
-	"fmt"
 	"bufio"
+	"fmt"
+	"io"
 	"log"
 	"os"
+	"strings"
 	//"regexp"
 	"os/exec"
 	"time"
@@ -18,12 +19,12 @@ func check(err error) {
 }
 
 func Start(prefix string, dir string, bin string) {
+	token := " <:_:> "
 	player_count := 0
 	os.Chdir(dir)
 	fmt.Println("%s/%s", dir, bin)
-	cmd := exec.Command("./" + bin, "-console")
-	
-	fmt.Println("got here?")
+	cmd := exec.Command("./"+bin, "-console")
+
 	stdout, err := cmd.StdoutPipe()
 	check(err)
 	stderr, err := cmd.StderrPipe()
@@ -34,16 +35,18 @@ func Start(prefix string, dir string, bin string) {
 	err = cmd.Start()
 	check(err)
 
-
 	fmt.Printf("%s: %s\n", prefix, player_count)
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			/*
-			if (scanner.Text() == "ConsoleInput: \"c_listallplayers()\"") {
-				// Detect player number
-			}
+				if (scanner.Text() == "ConsoleInput: \"c_listallplayers()\"") {
+					// Detect player number
+				}
 			*/
+			if strings.Contains(scanner.Text(), "ConsoleInput: ") {
+				continue
+			}
 			fmt.Printf("%s: %s\n", prefix, scanner.Text())
 		}
 		//r.ReadString("\n")
@@ -56,15 +59,10 @@ func Start(prefix string, dir string, bin string) {
 
 	go func() {
 		for {
-			stdin.Write([]byte("playerlist_file = io.open(\"starvewrap_playerlist\", \"w\")\n"))
-			stdin.Write([]byte("playerlist_file:write(c_listallplayers())\n"))
-			stdin.Write([]byte("a = c_listallplayers()\n"))
-			stdin.Write([]byte("playerlist_file:write(a)\n"))
-			stdin.Write([]byte("playerlist_file:close()\n"))
+			GetPlayerList(stdin, token)
 			time.Sleep(3 * time.Second)
 		}
 	}()
-	fmt.Println("yo")
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Println("CLEAN UP")
