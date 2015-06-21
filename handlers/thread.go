@@ -19,9 +19,10 @@ func check(err error) {
 }
 
 func Start(prefix string, dir string, bin string) {
+	//safeToUpgrade := false
 	token := " <:_:> "
 	player_count := 0
-	os.Chdir(dir)
+	os.Chdir(dir + "/bin")
 	fmt.Println("%s/%s", dir, bin)
 	cmd := exec.Command("./"+bin, "-console")
 
@@ -59,10 +60,12 @@ func Start(prefix string, dir string, bin string) {
 
 	go func() {
 		for {
-			GetPlayerList(stdin, token)
+			WritePlayerList(stdin, token)
+			GetNumPlayers(dir + "/data")
 			time.Sleep(3 * time.Second)
 		}
 	}()
+
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Println("CLEAN UP")

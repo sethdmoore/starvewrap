@@ -14,7 +14,7 @@ func check(err error) {
 */
 
 func main() {
-	dir := "/home/steam/steamapps/DST/bin"
+	dir := "/home/steam/steamapps/DST"
 	bin := "dontstarve_dedicated_server_nullrenderer"
 	steamcmd := "/home/steam/steamcmd/steamcmd.sh"
 
@@ -34,7 +34,7 @@ func main() {
 
 	for i := 0; i < len(servers); i++ {
 		fmt.Printf("%v\n", messages)
-		<- messages
+		<-messages
 	}
 	fmt.Printf("exited")
 }

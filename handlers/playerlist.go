@@ -1,15 +1,17 @@
 package handlers
 
 import (
-	//"fmt"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"strings"
 )
 
 func InitServer() {
 
 }
 
-func GetPlayerList(stdin io.WriteCloser, token string) {
+func WritePlayerList(stdin io.WriteCloser, token string) {
 	/*
 		// Valid fields from ClienTable
 		ping      21
@@ -27,7 +29,7 @@ func GetPlayerList(stdin io.WriteCloser, token string) {
 		"pds = \"\"",
 		"clients = TheNet:GetClientTable()",
 		"for idx,_ in pairs(clients) do if (clients[idx].ping ~= nil) then pds = pds .. clients[idx].name .. \"\\n\" end end",
-		"playerlist = io.open(\"playerlist\", \"w\")",
+		"playerlist = io.open(\"starvewrap_playerlist\", \"w\")",
 		"playerlist:write(pds)",
 		"playerlist:close()",
 	}
@@ -35,4 +37,16 @@ func GetPlayerList(stdin io.WriteCloser, token string) {
 	for _, code := range write_lua_loop {
 		stdin.Write([]byte(code + "\n"))
 	}
+}
+
+func GetNumPlayers(dir string) int {
+	var numP int
+	file := dir + "/starvewrap_playerlist"
+	contents, err := ioutil.ReadFile(file)
+	if err != nil {
+		fmt.Printf("Could not parse %v, %v\n", file, err)
+	}
+	numP = len(strings.Split(string(contents), "\n")) - 1
+	//fmt.Printf("%v", numP)
+	return numP
 }
