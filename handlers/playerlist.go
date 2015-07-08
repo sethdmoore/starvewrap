@@ -26,6 +26,10 @@ func WritePlayerList(stdin io.WriteCloser, token string) {
 		colour
 	*/
 	write_lua_loop := []string{
+		/*
+			This horror show inserts LUA directly into the console.
+
+		*/
 		"pds = \"\"",
 		"clients = TheNet:GetClientTable()",
 		"for idx,_ in pairs(clients) do if (clients[idx].ping ~= nil) then pds = pds .. clients[idx].name .. \"\\n\" end end",
