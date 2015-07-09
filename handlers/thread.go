@@ -7,7 +7,10 @@ import (
 	"log"
 	"os"
 	"strings"
+	"syscall"
 	//"regexp"
+	"github.com/sethdmoore/starvewrap/commands"
+	"github.com/sethdmoore/starvewrap/globals"
 	"github.com/sethdmoore/starvewrap/signals"
 	"os/exec"
 	"time"
@@ -19,23 +22,27 @@ func check(err error) {
 	}
 }
 
-func Start(prefix string, dir string, bin string, sig chan int) {
-	//main := make(chan int)
-
-	all := make(chan int)
-
+func Start(prefix string, dir string, bin string, mainsig chan int) {
 	safeToUpgrade := false
 	token := " <:_:> "
 	player_count := 0
 	os.Chdir(dir + "/bin")
 
 	fmt.Println("%s/%s", dir, bin)
+
 	cmd := exec.Command("./"+bin, "-console")
+
+	// ensure the child process is in its own process group
+	// TODO: investigate if this works on Windows
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	stdout, err := cmd.StdoutPipe()
 	check(err)
+
 	stderr, err := cmd.StderrPipe()
 	check(err)
+
+	stdin_lock := make(chan bool)
 	stdin, err := cmd.StdinPipe()
 	check(err)
 
@@ -43,11 +50,11 @@ func Start(prefix string, dir string, bin string, sig chan int) {
 	check(err)
 
 	fmt.Printf("%s: %s\n", prefix, player_count)
+
+	// stdout
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 
-		// label for exiting
-	loop:
 		for scanner.Scan() {
 			/*
 				if (scanner.Text() == "ConsoleInput: \"c_listallplayers()\"") {
@@ -55,30 +62,40 @@ func Start(prefix string, dir string, bin string, sig chan int) {
 				}
 			*/
 
-			select {
-
-			case sig := <-all:
-				if sig == signals.SIGINT {
-					break loop
-				}
-			default:
-			}
-
-			if strings.Contains(scanner.Text(), "ConsoleInput: ") {
+			/*
+				select {
+				case outsig := <-stdout_sig:
+					if outsig == signals.SIGINT {
+						fmt.Printf("STDOUT GOT THE SIGNAL")
+						break loop
+					}
+				default:
+			*/
+			if strings.Contains(scanner.Text(), commands.INPUT_TAG) {
 				continue
+			} else if scanner.Text() == globals.INIT_SUCCESS {
+				//fmt.Println("YESSSS")
+
+				/*
+					close will emit "zero values" from this chan
+					'false' in this case, therefore disabling the lock
+				*/
+				close(stdin_lock)
 			}
 			fmt.Printf("%s: %s\n", prefix, scanner.Text())
+			//}
+
 		}
-		//r.ReadString("\n")
-		//l, err := stdout.Reader.ReadBytes("\n")
-		//io.Copy(os.Stdout, stdout)
-		fmt.Println("Never get here?")
+		stdout.Close()
+		fmt.Printf("%s: STDOUT closed\n", prefix)
 		return
 	}()
 
+	// stderr
 	go func() {
 		io.Copy(os.Stderr, stderr)
-		fmt.Println("TODO: figure out how to break this")
+		fmt.Println(prefix + ": STDERR closed")
+		stderr.Close()
 		return
 	}()
 
@@ -89,38 +106,50 @@ func Start(prefix string, dir string, bin string, sig chan int) {
 
 	loop:
 		for {
-
-			WritePlayerList(stdin, token)
-			if GetNumPlayers(dir+"/data") == 0 {
-				safeToUpgrade = true
+			// block input until server is up
+			lock := <-stdin_lock
+			if lock {
+				break loop
 			}
 
 			// handle shutdowns
 			select {
-			case sig := <-all:
-				fmt.Println("%v", sig)
-				stdin.Write([]byte("c_shutdown(true)\n"))
-				break loop
-				/*
-					if sig == 0 {
-						break loop
-					}
-				*/
+			case insig := <-mainsig:
+				if insig == signals.SIGINT {
+
+					//stdin.Write([]byte(commands.SAVE_SHUTDOWN))
+					commands.Exec(stdin, commands.SAVE_SHUTDOWN)
+
+					time.Sleep(3 * time.Second)
+
+					break loop
+				} else {
+					fmt.Println("Some other signal")
+				}
 			default:
-				// no-op
+				WritePlayerList(stdin, token)
+				if GetNumPlayers(dir+"/data") == 0 {
+					safeToUpgrade = true
+					//fmt.Println("Safe to Upgrade")
+				} else {
+					safeToUpgrade = false
+				}
 			}
 
 			time.Sleep(3 * time.Second)
 		}
+		stdin.Close()
 		return
 	}()
 
-	//<-main
-	err = cmd.Wait()
+	//<-main2
 
+	// wait for server to exit
+	err = cmd.Wait()
 	if err != nil {
+		fmt.Println("nonzero")
 		fmt.Println("CLEAN UP")
 	}
 
-	fmt.Println("exited %s\n\n", prefix)
+	fmt.Printf("%s: exited\n\n", prefix)
 }

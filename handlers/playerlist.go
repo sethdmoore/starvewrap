@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/sethdmoore/starvewrap/commands"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -25,6 +26,7 @@ func WritePlayerList(stdin io.WriteCloser, token string) {
 		prefab   wx78
 		colour
 	*/
+
 	write_lua_loop := []string{
 		/*
 			This horror show inserts LUA directly into the console.
@@ -39,7 +41,8 @@ func WritePlayerList(stdin io.WriteCloser, token string) {
 	}
 
 	for _, code := range write_lua_loop {
-		stdin.Write([]byte(code + "\n"))
+		commands.Exec(stdin, code)
+		//stdin.Write([]byte(code + input_tag + "\n"))
 	}
 }
 
@@ -49,6 +52,7 @@ func GetNumPlayers(dir string) int {
 	contents, err := ioutil.ReadFile(file)
 	if err != nil {
 		fmt.Printf("Could not parse %v, %v\n", file, err)
+		return -1
 	}
 	numP = len(strings.Split(string(contents), "\n")) - 1
 	//fmt.Printf("%v", numP)

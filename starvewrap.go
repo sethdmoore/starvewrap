@@ -21,8 +21,10 @@ func main() {
 	bin := "dontstarve_dedicated_server_nullrenderer"
 	steamcmd := "/home/steam/steamcmd/steamcmd.sh"
 
-	//server_num := []string{"1", "2", "3"}
 	main := make(chan os.Signal)
+	signal.Notify(main, os.Interrupt)
+
+	//lock := make(chan int)
 
 	// number of server threads to spin up
 	server_num := []string{"1"}
@@ -47,17 +49,23 @@ func main() {
 		}(num)
 	}
 
-	signal.Notify(main, os.Interrupt)
 	sig := <-main
 
 	if sig == os.Interrupt {
 		for idx, _ := range server_num {
+			fmt.Println("Shutting down servers")
 			go func(x int) {
 				server_sig[x] <- signals.SIGINT
 			}(idx)
 		}
 		//handlers.Cleanup()
+	} else {
+		fmt.Printf("IT IS NOT")
+		fmt.Printf("%v", sig)
+		fmt.Printf("%v", sig)
+		fmt.Printf("%v", sig)
 	}
+	close(main)
 
 	// semaphore, wait to read from n number of chans
 	for i := 0; i < len(server_num); i++ {
@@ -65,5 +73,7 @@ func main() {
 		<-semaphore
 	}
 
-	fmt.Printf("exited")
+	//<-lock
+	fmt.Printf("exited\n")
+	os.Exit(0)
 }
