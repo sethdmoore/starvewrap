@@ -3,16 +3,15 @@ package handlers
 import (
 	"bufio"
 	"fmt"
-	"io"
-	"log"
-	"os"
-	"strings"
-	"syscall"
-	//"regexp"
 	"github.com/sethdmoore/starvewrap/commands"
 	"github.com/sethdmoore/starvewrap/globals"
 	"github.com/sethdmoore/starvewrap/signals"
+	"io"
+	"log"
+	"os"
 	"os/exec"
+	"strings"
+	"syscall"
 	"time"
 )
 
@@ -24,7 +23,7 @@ func check(err error) {
 
 func Start(prefix string, dir string, bin string, mainsig chan int) {
 	safeToUpgrade := false
-	token := " <:_:> "
+	token := "\x00"
 	player_count := 0
 	os.Chdir(dir + "/bin")
 
@@ -42,7 +41,8 @@ func Start(prefix string, dir string, bin string, mainsig chan int) {
 	stderr, err := cmd.StderrPipe()
 	check(err)
 
-	stdin_lock := make(chan bool)
+	stdin_lock := false
+	stdin_chan := make(chan bool)
 	stdin, err := cmd.StdinPipe()
 	check(err)
 
@@ -71,16 +71,19 @@ func Start(prefix string, dir string, bin string, mainsig chan int) {
 					}
 				default:
 			*/
+			// filter app spam from the logs
 			if strings.Contains(scanner.Text(), commands.INPUT_TAG) {
-				continue
-			} else if scanner.Text() == globals.INIT_SUCCESS {
-				//fmt.Println("YESSSS")
-
+				//continue
+				// don't write to stdin before the server is up
 				/*
 					close will emit "zero values" from this chan
 					'false' in this case, therefore disabling the lock
 				*/
-				close(stdin_lock)
+			} else if scanner.Text() == globals.INIT_SUCCESS {
+				if stdin_lock == false {
+					fmt.Println("YO")
+					stdin_chan <- true
+				}
 			}
 			fmt.Printf("%s: %s\n", prefix, scanner.Text())
 			//}
@@ -107,23 +110,34 @@ func Start(prefix string, dir string, bin string, mainsig chan int) {
 	loop:
 		for {
 			// block input until server is up
-			lock := <-stdin_lock
-			if lock {
-				break loop
+
+		inner:
+			for stdin_lock == false {
+				// probably don't need a select if we handle
+				// the timeout somewhere else
+				select {
+				case stdin_lock = <-stdin_chan:
+					if stdin_lock {
+						break inner
+					} else {
+						// signal failure, kill child
+					}
+				default:
+					fmt.Println("blocked")
+					time.Sleep(1 * time.Second)
+					// implement timeout
+				}
 			}
+			fmt.Println("I AM HERE")
 
 			// handle shutdowns
 			select {
 			case insig := <-mainsig:
-				if insig == signals.SIGINT {
-
-					//stdin.Write([]byte(commands.SAVE_SHUTDOWN))
+				switch {
+				case insig == signals.SIGINT:
 					commands.Exec(stdin, commands.SAVE_SHUTDOWN)
-
-					time.Sleep(3 * time.Second)
-
 					break loop
-				} else {
+				default:
 					fmt.Println("Some other signal")
 				}
 			default:
@@ -138,6 +152,9 @@ func Start(prefix string, dir string, bin string, mainsig chan int) {
 
 			time.Sleep(3 * time.Second)
 		}
+
+		// probably not necessary to close this...
+		// I'm pretty sure it receives EOF from the cmd
 		stdin.Close()
 		return
 	}()
@@ -151,5 +168,5 @@ func Start(prefix string, dir string, bin string, mainsig chan int) {
 		fmt.Println("CLEAN UP")
 	}
 
-	fmt.Printf("%s: exited\n\n", prefix)
+	fmt.Printf("%s: exited\n", prefix)
 }

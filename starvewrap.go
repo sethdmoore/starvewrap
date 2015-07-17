@@ -60,11 +60,10 @@ func main() {
 		}
 		//handlers.Cleanup()
 	} else {
-		fmt.Printf("IT IS NOT")
-		fmt.Printf("%v", sig)
-		fmt.Printf("%v", sig)
+		fmt.Printf("Something other than sigint")
 		fmt.Printf("%v", sig)
 	}
+
 	close(main)
 
 	// semaphore, wait to read from n number of chans
